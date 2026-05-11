@@ -13,7 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.lang.reflect.InvocationTargetException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -50,9 +50,13 @@ public class GitHubTrendingService {
     }
 
     public RepositoriesResponse fetchTrendingRepositories() {
-        log.info("Fetching trending repositories with query: {}", query);
+        // Replace {date} placeholder with today's date for daily trending query
+        String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        String dailyQuery = query.replace("{date}", today);
 
-        String fullUrl = trendingEndpoint + "?q=" + query + "&sort=" + sort + "&order=" + order + "&per_page=" + topCount;
+        log.info("Fetching trending repositories with query: {}", dailyQuery);
+
+        String fullUrl = trendingEndpoint + "?q=" + dailyQuery + "&sort=" + sort + "&order=" + order + "&per_page=" + topCount;
 
         try {
             return executor.submit(() -> {
