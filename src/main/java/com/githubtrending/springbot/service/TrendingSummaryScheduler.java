@@ -47,8 +47,9 @@ public class TrendingSummaryScheduler {
             // Step 3: Generate summary using llamacpp (fallback to mock if unavailable)
             String summary = generateSummaryOrDefault(prompt);
 
-            // Step 4: Send summary via Discord
-            discordBotService.sendSummaryToUsers(summary);
+            // Step 4: Append repo URLs and send via Discord
+            String fullMessage = appendRepoUrls(summary, repositories);
+            discordBotService.sendSummaryToUsers(fullMessage);
 
             log.info("Successfully generated and sent trending summary");
 
@@ -76,8 +77,9 @@ public class TrendingSummaryScheduler {
             // Step 3: Generate summary using llamacpp (fallback to mock if unavailable)
             String summary = generateSummaryOrDefault(prompt);
 
-            // Step 4: Send summary via Discord
-            discordBotService.sendSummaryToUsers(summary);
+            // Step 4: Append repo URLs and send via Discord
+            String fullMessage = appendRepoUrls(summary, repositories);
+            discordBotService.sendSummaryToUsers(fullMessage);
 
             log.info("Successfully generated and sent trending summary");
 
@@ -93,5 +95,20 @@ public class TrendingSummaryScheduler {
             log.warn("AI service unavailable, using mock summary: {}", e.getMessage());
             return mockAIService.generateSummary(prompt);
         }
+    }
+
+    /**
+     * Build a compact URL list from repositories and append it to the summary.
+     */
+    private String appendRepoUrls(String summary, List<Repository> repos) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(summary);
+        sb.append("\n\n━━━━━━━━━━━━━━━━━━━\n");
+        sb.append("📋 **Repo URLs**\n\n");
+        int i = 1;
+        for (Repository repo : repos) {
+            sb.append(i++).append(". ").append(repo.getHtmlUrl()).append("\n");
+        }
+        return sb.toString();
     }
 }
