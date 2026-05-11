@@ -1,6 +1,5 @@
 package com.githubtrending.springbot.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -39,43 +38,5 @@ public class Repository {
         }
         sb.append("\n🔗 ").append(htmlUrl);
         return sb.toString();
-    }
-
-    public String getHomepage() {
-        return homepage;
-    }
-
-    public void setHomepage(String homepage) {
-        this.homepage = homepage;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
-
-    public Repository(String name, String fullName, String description, String htmlUrl, String language,
-                      Integer stars, Integer forks, String owner, String avatarUrl, String homepage) {
-        this.name = name;
-        this.fullName = fullName;
-        this.description = description;
-        this.htmlUrl = htmlUrl;
-        this.language = language;
-        this.stars = stars;
-        this.forks = forks;
-        this.owner = owner;
-        this.avatarUrl = avatarUrl;
-        this.homepage = homepage;
     }
 }
