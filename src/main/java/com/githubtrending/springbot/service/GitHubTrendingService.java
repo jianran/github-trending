@@ -27,6 +27,7 @@ public class GitHubTrendingService {
     private static final Logger log = LoggerFactory.getLogger(GitHubTrendingService.class);
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final GitHubTrendingScraper trendingScraper;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @Value("${github.trending.endpoint}")
@@ -44,16 +45,28 @@ public class GitHubTrendingService {
     @Value("${github.trending.top:10}")
     private int topCount;
 
-    public GitHubTrendingService(WebClient webClient, ObjectMapper objectMapper) {
+    public GitHubTrendingService(WebClient webClient, ObjectMapper objectMapper,
+                                  GitHubTrendingScraper trendingScraper) {
         this.webClient = webClient;
         this.objectMapper = objectMapper;
+        this.trendingScraper = trendingScraper;
     }
 
     public RepositoriesResponse fetchTrendingRepositories() {
-        // Replace {date} placeholder with today's date for daily trending query
+        // Primary: scrape GitHub's official trending page (star increase today)
+        log.info("Attempting to fetch trending repos from GitHub trending page...");
+        List<Repository> scraped = trendingScraper.fetchTrendingToday();
+        if (!scraped.isEmpty()) {
+            log.info("Using {} trending repos from GitHub trending page", scraped.size());
+            RepositoriesResponse resp = new RepositoriesResponse();
+            resp.setTrendingRepositories(scraped);
+            return resp;
+        }
+
+        // Fallback: Search API
+        log.warn("Trending page scrape returned empty, falling back to Search API");
         String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
         String dailyQuery = query.replace("{date}", today);
-
         log.info("Fetching trending repositories with query: {}", dailyQuery);
 
         String fullUrl = trendingEndpoint + "?q=" + dailyQuery + "&sort=" + sort + "&order=" + order + "&per_page=" + topCount;
