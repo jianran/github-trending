@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.githubtrending.springbot.model.RepositoriesResponse;
 import com.githubtrending.springbot.model.Repository;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,10 +13,13 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class GitHubTrendingService {
@@ -23,6 +27,7 @@ public class GitHubTrendingService {
     private static final Logger log = LoggerFactory.getLogger(GitHubTrendingService.class);
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @Value("${github.trending.endpoint}")
     private String trendingEndpoint;
@@ -49,18 +54,26 @@ public class GitHubTrendingService {
 
         String fullUrl = trendingEndpoint + "?q=" + query + "&sort=" + sort + "&order=" + order + "&per_page=" + topCount;
 
-        return webClient.get()
-                .uri(fullUrl)
-                .header(HttpHeaders.USER_AGENT, "GitHub-Trending-Bot/1.0")
-                .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .retrieve()
-                .bodyToMono(String.class)
-                .doOnSuccess(response -> {
-                    log.debug("GitHub API response: {}", response);
-                })
-                .doOnError(error -> log.error("Error fetching trending repositories", error))
-                .map(this::parseRepositories)
-                .block();
+        try {
+            return executor.submit(() -> {
+                String jsonResponse = webClient.get()
+                        .uri(fullUrl)
+                        .header(HttpHeaders.USER_AGENT, "GitHub-Trending-Bot/1.0")
+                        .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .doOnSuccess(response -> {
+                            log.debug("GitHub API response: {}", response);
+                        })
+                        .doOnError(error -> log.error("Error fetching trending repositories", error))
+                        .block();
+
+                return parseRepositories(jsonResponse);
+            }).get();
+        } catch (Exception e) {
+            log.error("Error fetching repositories", e);
+            return new RepositoriesResponse();
+        }
     }
 
     private RepositoriesResponse parseRepositories(String jsonResponse) {
@@ -102,6 +115,11 @@ public class GitHubTrendingService {
             log.error("Error parsing GitHub API response", e);
             return new RepositoriesResponse();
         }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        executor.shutdown();
     }
 
     public String formatRepositoriesAsText(List<Repository> repositories) {

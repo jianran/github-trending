@@ -14,13 +14,16 @@ public class TrendingSummaryScheduler {
     private static final Logger log = LoggerFactory.getLogger(TrendingSummaryScheduler.class);
     private final GitHubTrendingService gitHubTrendingService;
     private final LlamaCppService llamaCppService;
+    private final MockAIService mockAIService;
     private final DiscordBotService discordBotService;
 
     public TrendingSummaryScheduler(GitHubTrendingService gitHubTrendingService,
                                      LlamaCppService llamaCppService,
+                                     MockAIService mockAIService,
                                      DiscordBotService discordBotService) {
         this.gitHubTrendingService = gitHubTrendingService;
         this.llamaCppService = llamaCppService;
+        this.mockAIService = mockAIService;
         this.discordBotService = discordBotService;
     }
 
@@ -41,8 +44,8 @@ public class TrendingSummaryScheduler {
             // Step 2: Generate prompt for summarization
             String prompt = gitHubTrendingService.getPromptForSummarization(repositories);
 
-            // Step 3: Generate summary using llamacpp
-            String summary = llamaCppService.generateSummary(prompt);
+            // Step 3: Generate summary using llamacpp (fallback to mock if unavailable)
+            String summary = generateSummaryOrDefault(prompt);
 
             // Step 4: Send summary via Discord
             discordBotService.sendSummaryToUsers(summary);
@@ -70,8 +73,8 @@ public class TrendingSummaryScheduler {
             // Step 2: Generate prompt for summarization
             String prompt = gitHubTrendingService.getPromptForSummarization(repositories);
 
-            // Step 3: Generate summary using llamacpp
-            String summary = llamaCppService.generateSummary(prompt);
+            // Step 3: Generate summary using llamacpp (fallback to mock if unavailable)
+            String summary = generateSummaryOrDefault(prompt);
 
             // Step 4: Send summary via Discord
             discordBotService.sendSummaryToUsers(summary);
@@ -80,6 +83,15 @@ public class TrendingSummaryScheduler {
 
         } catch (Exception e) {
             log.error("Error during manual summary generation", e);
+        }
+    }
+
+    private String generateSummaryOrDefault(String prompt) {
+        try {
+            return llamaCppService.generateSummary(prompt);
+        } catch (Exception e) {
+            log.warn("AI service unavailable, using mock summary: {}", e.getMessage());
+            return mockAIService.generateSummary(prompt);
         }
     }
 }

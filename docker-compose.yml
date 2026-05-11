@@ -33,7 +33,9 @@ services:
       GITHUB_TRENDING_TOP: ${GITHUB_TRENDING_TOP:-10}
 
       # llama.cpp (points to host or a sidecar container)
-      LLAMACPP_SERVER_URL: ${LLAMACPP_SERVER_URL:-http://host.docker.internal:8131}
+      # Inside Docker: host.docker.internal reaches the host machine
+      # .env's LLAMACPP_SERVER_URL (127.0.0.1:8131) only works for local (non-Docker) runs
+      LLAMACPP_SERVER_URL: http://host.docker.internal:8131
       LLAMACPP_MODEL: ${LLAMACPP_MODEL:-unsloth/qwen3.5-35b-a3b}
 
       # Schedule
