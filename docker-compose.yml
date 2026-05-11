@@ -1,0 +1,78 @@
+# =============================================================================
+# Docker Compose for local development
+# =============================================================================
+#
+# Usage:
+#   docker compose up --build        # Start app (with llama.cpp if enabled)
+#   docker compose up app            # Start app only
+#   docker compose up -d app         # Start app in background
+#   docker compose down              # Stop everything
+#   docker compose exec app mvn test # Run tests inside the container
+#
+# Environment variables are loaded from .env by default.
+# =============================================================================
+
+services:
+  app:
+    build: .
+    container_name: github-trending-bot
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: 8080
+
+      # Discord
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      DISCORD_SUMMARY_CHANNEL_ID: ${DISCORD_SUMMARY_CHANNEL_ID}
+      DISCORD_DM_USER_IDS: ${DISCORD_DM_USER_IDS}
+
+      # GitHub Trending
+      GITHUB_TRENDING_PERIOD: ${GITHUB_TRENDING_PERIOD:-daily}
+      GITHUB_TRENDING_TOP: ${GITHUB_TRENDING_TOP:-10}
+
+      # llama.cpp (points to host or a sidecar container)
+      LLAMACPP_SERVER_URL: ${LLAMACPP_SERVER_URL:-http://host.docker.internal:8131}
+      LLAMACPP_MODEL: ${LLAMACPP_MODEL:-unsloth/qwen3.5-35b-a3b}
+
+      # Schedule
+      SUMMARY_SCHEDULE_CRON: ${SUMMARY_SCHEDULE_CRON:-0 0 9 * * *}
+      SUMMARY_PROMPT_TEMPLATE: ${SUMMARY_PROMPT_TEMPLATE:-}
+
+    # Extra hosts allows the container to reach the host machine
+    # (needed for llama.cpp running natively on the host)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ---- Optional: llama.cpp as a sidecar (uncomment to use) ----
+  # llama-cpp:
+  #   image: ghcr.io/ggerganov/llama.cpp:latest
+  #   container_name: llama-cpp
+  #   ports:
+  #     - "8131:8131"
+  #   volumes:
+  #     - ./models:/models
+  #   command: >
+  #     --server
+  #     --host 0.0.0.0
+  #     --port 8131
+  #     --model /models/unsloth/qwen3.5-35b-a3b
+  #     --n-gpu-layers -1
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]

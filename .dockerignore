@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Build output
+target/
+build/
+*.jar
+*.war
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Environment (secrets stay out of the image)
+.env
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Maven wrapper (not needed when maven is in the build stage)
+mvnw
+mvnw.cmd
